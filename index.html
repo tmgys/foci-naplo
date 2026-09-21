@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Focimeccs-napló</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700&family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* ---- Színek egy helyen -------------------------------------------- */
+:root {
+  --ground:#f4f4f1;  --surface:#ffffff;
+  --ink:#15171a;     --ink2:#5b5f5e;    --ink3:#8a8d8b;
+  --vonal:#e4e4df;   --racs:#e9e9e3;
+  --accent:#1c6b45;  --accent-halvany:#e7f0ea;
+  --gyoz:#15764a;    --veszt:#b8402f;
+  --s1:#2a78d6;      --s2:#eb6834;      --s3:#4a3aa7;
+  --display:"Archivo", system-ui, sans-serif;
+  --body:"IBM Plex Sans", system-ui, -apple-system, sans-serif;
+  --mono:"IBM Plex Mono", ui-monospace, "SF Mono", monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ground:#101211;  --surface:#191c1b;
+    --ink:#f1f3f1;     --ink2:#b2b6b3;    --ink3:#848886;
+    --vonal:#2a2e2c;   --racs:#2a2e2c;
+    --accent:#56ab80;  --accent-halvany:#1a2a22;
+    --gyoz:#56ab80;    --veszt:#e08878;
+    --s1:#3987e5;      --s2:#d95926;      --s3:#9085e9;
+  }
+}
+
+/* ---- Alap ---------------------------------------------------------- */
+* { box-sizing:border-box; }
+body { margin:0; padding-block:40px 80px; padding-inline:16px;
+       background:var(--ground); color:var(--ink);
+       font-family:var(--body); font-size:15px; line-height:1.55;
+       -webkit-font-smoothing:antialiased; }
+.wrap { max-width:960px; margin:0 auto; }
+h1,h2 { font-family:var(--display); font-weight:700; margin:0; text-wrap:balance; }
+h1 { font-size:30px; letter-spacing:-0.02em; }
+.eyebrow { font-size:11px; text-transform:uppercase; letter-spacing:.12em;
+           color:var(--ink3); margin:0 0 2px; font-weight:600; }
+
+/* ---- Fejléc -------------------------------------------------------- */
+.fejlec { display:flex; align-items:flex-end; justify-content:space-between;
+          gap:16px; flex-wrap:wrap; margin-bottom:30px; }
+button { font:inherit; cursor:pointer; border-radius:6px; }
+.fogomb { font-family:var(--display); font-weight:600; font-size:14px;
+          padding:9px 18px; border:1px solid var(--accent);
+          background:var(--accent); color:var(--surface); }
+.fogomb:hover { filter:brightness(1.08); }
+.szoveggomb { border:none; background:none; color:var(--ink3);
+              font-size:13px; padding:3px 5px; text-decoration:underline; }
+.szoveggomb:hover { color:var(--ink); }
+:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+
+/* ---- Szezonösszesítő ----------------------------------------------- */
+.osszegzo { display:flex; flex-wrap:wrap; gap:0;
+            border-top:1px solid var(--vonal); border-bottom:1px solid var(--vonal);
+            margin-bottom:34px; }
+.tetel { flex:1 1 128px; padding:16px 20px 15px; border-left:1px solid var(--vonal); }
+.tetel:first-child { border-left:none; padding-left:0; }
+.tetel .ertek { font-family:var(--mono); font-weight:600; font-size:27px;
+                line-height:1.1; font-variant-numeric:tabular-nums; }
+.tetel .cimke { font-size:11px; text-transform:uppercase; letter-spacing:.09em;
+                color:var(--ink3); margin-top:3px; }
+
+/* ---- Űrlap --------------------------------------------------------- */
+.panel { background:var(--surface); border:1px solid var(--vonal);
+         border-radius:10px; padding:20px; margin-bottom:34px; }
+.panel.szerkesztes { border-color:var(--accent); }
+.panelFej { display:flex; justify-content:space-between; align-items:baseline;
+            margin-bottom:16px; }
+.panelFej h2 { font-size:16px; }
+.mezok { display:grid; grid-template-columns:repeat(auto-fit,minmax(124px,1fr)); gap:14px; }
+.mezok .teljes { grid-column:1 / -1; }
+label { display:block; font-size:12px; color:var(--ink2); margin-bottom:5px;
+        font-weight:500; }
+input, select { width:100%; height:38px; padding:0 10px; font:inherit; font-size:14px;
+                color:var(--ink); background:var(--surface);
+                border:1px solid var(--vonal); border-radius:6px; }
+input:focus, select:focus { border-color:var(--accent); }
+.gombsor { display:flex; align-items:center; gap:10px; margin-top:18px; }
+
+/* ---- Diagramok ----------------------------------------------------- */
+.chartok { display:grid; grid-template-columns:repeat(auto-fit,minmax(320px,1fr));
+           gap:24px; margin-bottom:38px; }
+figure { margin:0; background:var(--surface); border:1px solid var(--vonal);
+         border-radius:10px; padding:16px 16px 10px; }
+figcaption { font-family:var(--display); font-weight:600; font-size:14px; }
+.jelmagy { display:flex; gap:14px; font-size:12px; color:var(--ink2);
+           margin:4px 0 10px; }
+.jelmagy span { display:inline-flex; align-items:center; gap:6px; }
+.kocka { width:9px; height:9px; border-radius:2px; }
+
+/* ---- Meccslista ---------------------------------------------------- */
+.szekcioCim { font-size:13px; text-transform:uppercase; letter-spacing:.09em;
+              color:var(--ink3); font-family:var(--body); font-weight:600;
+              margin-bottom:10px; }
+.meccs { display:grid; gap:4px 18px; align-items:center; padding:16px 0;
+         border-bottom:1px solid var(--vonal);
+         grid-template-columns:66px minmax(110px,1fr) auto auto auto auto; }
+.meccs.aktiv { background:var(--accent-halvany); border-radius:8px;
+               padding-inline:12px; margin-inline:-12px; }
+.datum { font-family:var(--mono); font-size:14px; font-weight:500; }
+.tipus, .hely { font-size:12px; color:var(--ink3); }
+.nev { font-family:var(--display); font-weight:600; font-size:16px; }
+.eredmeny { display:flex; align-items:center; gap:9px; }
+.pontszam { font-family:var(--mono); font-weight:600; font-size:19px;
+            font-variant-numeric:tabular-nums; white-space:nowrap; }
+.chip { font-size:11px; font-weight:600; padding:2px 7px; border-radius:4px;
+        border:1px solid currentColor; }
+.chip.gy { color:var(--gyoz); } .chip.v { color:var(--veszt); } .chip.d { color:var(--ink3); }
+.adatok { display:flex; gap:16px; }
+.adatok div { text-align:right; }
+.adatok dt { font-size:10px; text-transform:uppercase; letter-spacing:.07em; color:var(--ink3); }
+.adatok dd { margin:0; font-family:var(--mono); font-size:15px; font-weight:500;
+             font-variant-numeric:tabular-nums; }
+.ertekeles { color:var(--accent); letter-spacing:1.5px; font-size:12px; white-space:nowrap; }
+.ertekeles.nincs { color:var(--ink3); }
+.muveletek { display:flex; gap:2px; }
+.jegyzet { grid-column:2 / -1; margin:2px 0 0; font-size:13px; color:var(--ink2); }
+.ures { color:var(--ink3); padding:34px 0; text-align:center; }
+
+
+/* ---- Adatok sáv ---------------------------------------------------- */
+.adatsav { margin-top:44px; padding-top:22px; border-top:1px solid var(--vonal); }
+.adatsav h2 { font-size:13px; text-transform:uppercase; letter-spacing:.09em;
+              color:var(--ink3); font-family:var(--body); font-weight:600; margin-bottom:12px; }
+.adatgombok { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:12px; }
+.halvanygomb { font-family:var(--body); font-size:13px; font-weight:500; padding:8px 14px;
+               border:1px solid var(--vonal); background:var(--surface); color:var(--ink); }
+.halvanygomb:hover { border-color:var(--accent); color:var(--accent); }
+.adatsav p { font-size:13px; color:var(--ink3); margin:0; max-width:64ch; }
+.uzenet { font-size:13px; margin-top:12px; padding:9px 12px; border-radius:6px;
+          background:var(--accent-halvany); color:var(--accent); }
+.uzenet.baj { background:transparent; color:var(--veszt); border:1px solid var(--veszt); }
+
+@media (max-width:660px) {
+  .meccs { grid-template-columns:1fr auto; gap:6px 12px; }
+  .meccs > .datumCella { grid-column:1; }
+  .meccs > .eredmeny { grid-column:2; grid-row:1; justify-self:end; }
+  .meccs > .ellenfelCella { grid-column:1 / -1; }
+  .adatok, .ertekeles, .muveletek, .jegyzet { grid-column:1 / -1; }
+  .adatok div { text-align:left; }
+  h1 { font-size:25px; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="fejlec">
+    <div>
+      <p class="eyebrow">Szezon 2026/27</p>
+      <h1>Focimeccs-napló</h1>
+    </div>
+    <button class="fogomb" id="nyitGomb" onclick="urlapNyit()">Új meccs</button>
+  </header>
+
+  <section class="osszegzo" id="statok"></section>
+
+  <section class="panel" id="urlapPanel" hidden>
+    <div class="panelFej">
+      <h2 id="urlapCim">Új meccs</h2>
+      <button type="button" class="szoveggomb" onclick="megse()">bezárás</button>
+    </div>
+    <form id="urlap">
+      <div class="mezok">
+        <div><label for="f-datum">Dátum</label><input type="date" id="f-datum" name="datum" required></div>
+        <div>
+          <label for="f-tipus">Típus</label>
+          <select id="f-tipus" name="tipus">
+            <option>Bajnoki</option><option>Kupa</option><option>Torna</option>
+            <option>Edzőmeccs</option><option>Egyéb</option>
+          </select>
+        </div>
+        <div><label for="f-ellenfel">Ellenfél</label><input id="f-ellenfel" name="ellenfel" placeholder="pl. Vasas" required></div>
+        <div><label for="f-helyszin">Helyszín</label><input id="f-helyszin" name="helyszin" placeholder="pl. hazai pálya"></div>
+        <div><label for="f-mi">Mi</label><input type="number" id="f-mi" name="sajatGol" min="0" value="0"></div>
+        <div><label for="f-ok">Ők</label><input type="number" id="f-ok" name="ellenfelGol" min="0" value="0"></div>
+        <div><label for="f-gol">Gól</label><input type="number" id="f-gol" name="gol" min="0" value="0"></div>
+        <div><label for="f-assz">Assziszt</label><input type="number" id="f-assz" name="assziszt" min="0" value="0"></div>
+        <div><label for="f-perc">Játszott perc</label><input type="number" id="f-perc" name="percek" min="0" value="0"></div>
+        <div>
+          <label for="f-ert">Értékelés</label>
+          <select id="f-ert" name="ertekeles">
+            <option value="">–</option>
+            <option value="5">5 – kiemelkedő</option><option value="4">4 – jó</option>
+            <option value="3">3 – rendben</option><option value="2">2 – hullámzó</option>
+            <option value="1">1 – gyenge</option>
+          </select>
+        </div>
+        <div class="teljes"><label for="f-jegyzet">Megjegyzés</label><input id="f-jegyzet" name="jegyzet" placeholder="pl. első félidő, jó védekezés"></div>
+      </div>
+      <div class="gombsor">
+        <button type="submit" class="fogomb" id="mentesGomb">Meccs hozzáadása</button>
+        <button type="button" class="szoveggomb" onclick="megse()">mégse</button>
+      </div>
+    </form>
+  </section>
+
+  <section class="chartok">
+    <figure>
+      <figcaption>Gól és assziszt meccsenként</figcaption>
+      <div class="jelmagy">
+        <span><i class="kocka" style="background:var(--s1)"></i>Gól</span>
+        <span><i class="kocka" style="background:var(--s2)"></i>Assziszt</span>
+      </div>
+      <div id="chartGol"></div>
+    </figure>
+    <figure>
+      <figcaption>Értékelés alakulása</figcaption>
+      <div class="jelmagy"><span>1-től 5-ig, a saját értékelésed</span></div>
+      <div id="chartErt"></div>
+    </figure>
+  </section>
+
+  <section>
+    <h2 class="szekcioCim">Meccsek</h2>
+    <div id="sorok"></div>
+    <p class="ures" id="ures">Még nincs felvitt meccs. Kezdd az „Új meccs" gombbal.</p>
+  </section>
+
+  <section class="adatsav">
+    <h2>Adatok</h2>
+    <div class="adatgombok">
+      <button type="button" class="halvanygomb" onclick="mentesFajlba()">Mentés fájlba</button>
+      <button type="button" class="halvanygomb" onclick="document.getElementById('fajlBe').click()">Visszatöltés</button>
+      <button type="button" class="halvanygomb" onclick="csvExport()">Letöltés Excelbe (CSV)</button>
+      <input type="file" id="fajlBe" accept=".json,application/json" hidden>
+    </div>
+    <p>A meccsek a böngésződ tárolójában vannak, ezen a gépen. Ha kitakarítod a böngésző
+       adatait, elvesznek — ezért érdemes időnként fájlba menteni. A mentett fájlból
+       bármikor visszatölthető minden.</p>
+    <div id="uzenet" hidden></div>
+  </section>
+
+</div>
+
+<script>
+// ---- 1. Adattárolás -------------------------------------------------
+const KULCS = "foci-naplo";
+let meccsek = [];
+let szerkesztettId = null;   // null = új meccs, szám = azt szerkesztjük
+let urlapNyitva = false;     // látszik-e az űrlap panel
+
+function betolt() {
+  try { meccsek = JSON.parse(localStorage.getItem(KULCS)) || []; }
+  catch (e) { meccsek = []; }
+}
+function ment() {
+  try { localStorage.setItem(KULCS, JSON.stringify(meccsek)); }
+  catch (e) { alert("Nem sikerült menteni. Privát böngészőablakban vagy?"); }
+}
+
+const urlap = document.getElementById("urlap");
+
+function escape_(s) {
+  return String(s).replace(/[&<>"]/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" }[c]));
+}
+function r1(n) { return Math.round(n * 10) / 10; }
+function idorendben() { return [...meccsek].sort((a,b) => a.datum.localeCompare(b.datum)); }
+function napHonap(d) { return d ? d.slice(5).replace("-", ".") : ""; }
+
+// ---- 2. Diagramok (SVG, külső könyvtár nélkül) ----------------------
+const SZEL = 540, MAG = 200, BAL = 26, JOBB = 10, FENT = 10, LENT = 32;
+const PW = SZEL - BAL - JOBB, PH = MAG - FENT - LENT;
+
+function svg(tartalom) {
+  return "<svg viewBox='0 0 " + SZEL + " " + MAG + "' width='100%' style='display:block' role='img'>" + tartalom + "</svg>";
+}
+function racsvonal(y, felirat) {
+  return "<line x1='" + BAL + "' y1='" + r1(y) + "' x2='" + (SZEL-JOBB) + "' y2='" + r1(y) + "' stroke='var(--racs)' stroke-width='1'/>"
+       + "<text x='" + (BAL-6) + "' y='" + r1(y+3.5) + "' text-anchor='end' font-size='10' fill='var(--ink3)'>" + felirat + "</text>";
+}
+function xfelirat(x, szoveg) {
+  return "<text x='" + r1(x) + "' y='" + (MAG-12) + "' text-anchor='middle' font-size='10' fill='var(--ink3)'>" + szoveg + "</text>";
+}
+function oszlop(x, tetejeY, w, h, kerek, szin, cim) {
+  if (h <= 0.5) return "";
+  const k = kerek ? Math.min(4, w/2, h) : 0;
+  const d = "M" + r1(x) + "," + r1(tetejeY+h)
+          + " L" + r1(x) + "," + r1(tetejeY+k)
+          + (k ? " Q" + r1(x) + "," + r1(tetejeY) + " " + r1(x+k) + "," + r1(tetejeY) : "")
+          + " L" + r1(x+w-k) + "," + r1(tetejeY)
+          + (k ? " Q" + r1(x+w) + "," + r1(tetejeY) + " " + r1(x+w) + "," + r1(tetejeY+k) : "")
+          + " L" + r1(x+w) + "," + r1(tetejeY+h) + " Z";
+  return "<path d='" + d + "' fill='" + szin + "'><title>" + escape_(cim) + "</title></path>";
+}
+
+function rajzolGolChart() {
+  const doboz = document.getElementById("chartGol");
+  const adat = idorendben();
+  if (!adat.length) { doboz.innerHTML = "<p class='ures'>Nincs még adat.</p>"; return; }
+
+  const max = Math.max(3, ...adat.map(m => Number(m.gol||0) + Number(m.assziszt||0)));
+  const y = v => FENT + PH - (v / max) * PH;
+  const sav = PW / adat.length;
+  const szel = Math.min(28, sav * 0.55);
+  const lepes = max > 6 ? Math.ceil(max / 5) : 1;
+  const suruseg = Math.ceil(adat.length / 10);
+
+  let s = "";
+  for (let t = 0; t <= max; t += lepes) s += racsvonal(y(t), t);
+
+  adat.forEach((m, i) => {
+    const gol = Number(m.gol || 0), asz = Number(m.assziszt || 0);
+    const x = BAL + sav * i + (sav - szel) / 2;
+    const cimke = napHonap(m.datum) + " " + (m.ellenfel || "");
+    if (gol > 0) s += oszlop(x, y(gol), szel, y(0) - y(gol), asz === 0, "var(--s1)", cimke + " — " + gol + " gól");
+    if (asz > 0) {
+      const alja = gol > 0 ? y(gol) - 2 : y(0);
+      s += oszlop(x, y(gol + asz), szel, alja - y(gol + asz), true, "var(--s2)", cimke + " — " + asz + " assziszt");
+    }
+    if (i % suruseg === 0) s += xfelirat(x + szel/2, napHonap(m.datum));
+  });
+  s += "<line x1='" + BAL + "' y1='" + r1(y(0)) + "' x2='" + (SZEL-JOBB) + "' y2='" + r1(y(0)) + "' stroke='var(--vonal)' stroke-width='1'/>";
+  doboz.innerHTML = svg(s);
+}
+
+function rajzolErtChart() {
+  const doboz = document.getElementById("chartErt");
+  const adat = idorendben().filter(m => m.ertekeles);
+  if (!adat.length) { doboz.innerHTML = "<p class='ures'>Még nincs értékelt meccs.</p>"; return; }
+
+  const y = v => FENT + PH - ((v - 1) / 4) * PH;
+  const x = i => adat.length === 1 ? BAL + PW/2 : BAL + (PW * i) / (adat.length - 1);
+  const suruseg = Math.ceil(adat.length / 8);
+
+  let s = "";
+  for (let t = 1; t <= 5; t++) s += racsvonal(y(t), t);
+
+  const pontok = adat.map((m, i) => [x(i), y(Number(m.ertekeles))]);
+  if (pontok.length > 1) {
+    s += "<polyline fill='none' stroke='var(--s3)' stroke-width='2' stroke-linejoin='round' stroke-linecap='round' points='"
+       + pontok.map(p => r1(p[0]) + "," + r1(p[1])).join(" ") + "'/>";
+  }
+  adat.forEach((m, i) => {
+    const p = pontok[i];
+    s += "<circle cx='" + r1(p[0]) + "' cy='" + r1(p[1]) + "' r='4.5' fill='var(--s3)' stroke='var(--surface)' stroke-width='2'>"
+       + "<title>" + escape_(napHonap(m.datum) + " " + (m.ellenfel||"") + " — " + m.ertekeles + "/5") + "</title></circle>";
+    if (i % suruseg === 0) s += xfelirat(p[0], napHonap(m.datum));
+  });
+  doboz.innerHTML = svg(s);
+}
+
+// ---- 3. Meccslista és összesítő -------------------------------------
+function ertekelesJelolo(ertek) {
+  if (!ertek) return "<div class='ertekeles nincs' title='nincs értékelés'>○○○○○</div>";
+  const n = Number(ertek);
+  return "<div class='ertekeles' title='" + n + " / 5'>" + "●".repeat(n) + "○".repeat(5 - n) + "</div>";
+}
+
+function kirajzol() {
+  const rendezett = [...meccsek].sort((a, b) => b.datum.localeCompare(a.datum));
+  document.getElementById("ures").hidden = meccsek.length > 0;
+
+  document.getElementById("sorok").innerHTML = rendezett.map(m => {
+    const jel  = m.sajatGol > m.ellenfelGol ? "gy" : (m.sajatGol < m.ellenfelGol ? "v" : "d");
+    const betu = jel === "gy" ? "Gy" : (jel === "v" ? "V" : "D");
+    return "<article class='meccs" + (m.id === szerkesztettId ? " aktiv" : "") + "'>"
+      + "<div class='datumCella'><div class='datum'>" + napHonap(m.datum) + "</div>"
+      +   "<div class='tipus'>" + escape_(m.tipus || "–") + "</div></div>"
+      + "<div class='ellenfelCella'><div class='nev'>" + escape_(m.ellenfel) + "</div>"
+      +   "<div class='hely'>" + escape_(m.helyszin || "") + "</div></div>"
+      + "<div class='eredmeny'><span class='pontszam'>" + m.sajatGol + " : " + m.ellenfelGol + "</span>"
+      +   "<span class='chip " + jel + "'>" + betu + "</span></div>"
+      + "<dl class='adatok'>"
+      +   "<div><dt>Gól</dt><dd>" + m.gol + "</dd></div>"
+      +   "<div><dt>Assz</dt><dd>" + m.assziszt + "</dd></div>"
+      +   "<div><dt>Perc</dt><dd>" + m.percek + "</dd></div>"
+      + "</dl>"
+      + ertekelesJelolo(m.ertekeles)
+      + "<div class='muveletek'>"
+      +   "<button class='szoveggomb' onclick='szerkeszt(" + m.id + ")'>szerkeszt</button>"
+      +   "<button class='szoveggomb' onclick='torol(" + m.id + ")'>töröl</button></div>"
+      + (m.jegyzet ? "<p class='jegyzet'>" + escape_(m.jegyzet) + "</p>" : "")
+      + "</article>";
+  }).join("");
+
+  const osszeg = mezo => meccsek.reduce((s, m) => s + Number(m[mezo] || 0), 0);
+  const ertekeltek = meccsek.filter(m => m.ertekeles);
+  const atlag = ertekeltek.length
+    ? (ertekeltek.reduce((s, m) => s + Number(m.ertekeles), 0) / ertekeltek.length).toFixed(1) : "–";
+
+  document.getElementById("statok").innerHTML = [
+    ["Meccs", meccsek.length], ["Gól", osszeg("gol")], ["Assziszt", osszeg("assziszt")],
+    ["Játszott perc", osszeg("percek")], ["Átlag értékelés", atlag]
+  ].map(s => "<div class='tetel'><div class='ertek'>" + s[1] + "</div><div class='cimke'>" + s[0] + "</div></div>").join("");
+
+  rajzolGolChart();
+  rajzolErtChart();
+}
+
+// Az űrlap kinézete két dologból következik: nyitva van-e, és szerkesztünk-e.
+function urlapModValtas() {
+  const szerkesztunk = szerkesztettId !== null;
+  document.getElementById("urlapPanel").hidden      = !urlapNyitva;
+  document.getElementById("urlapPanel").className   = szerkesztunk ? "panel szerkesztes" : "panel";
+  document.getElementById("urlapCim").textContent   = szerkesztunk ? "Meccs szerkesztése" : "Új meccs";
+  document.getElementById("mentesGomb").textContent = szerkesztunk ? "Módosítás mentése" : "Meccs hozzáadása";
+  document.getElementById("nyitGomb").hidden        = urlapNyitva;
+}
+
+// ---- 4. Műveletek ---------------------------------------------------
+function urlapNyit() {
+  szerkesztettId = null;
+  urlapNyitva = true;
+  urlap.reset();
+  urlapModValtas();
+  kirajzol();
+  document.getElementById("f-datum").focus();
+}
+
+function szerkeszt(id) {
+  const m = meccsek.find(x => x.id === id);
+  if (!m) return;
+  szerkesztettId = id;
+  urlapNyitva = true;
+  urlap.elements.datum.value       = m.datum || "";
+  urlap.elements.tipus.value       = m.tipus || "Bajnoki";
+  urlap.elements.ellenfel.value    = m.ellenfel || "";
+  urlap.elements.helyszin.value    = m.helyszin || "";
+  urlap.elements.sajatGol.value    = m.sajatGol || 0;
+  urlap.elements.ellenfelGol.value = m.ellenfelGol || 0;
+  urlap.elements.gol.value         = m.gol || 0;
+  urlap.elements.assziszt.value    = m.assziszt || 0;
+  urlap.elements.percek.value      = m.percek || 0;
+  urlap.elements.ertekeles.value   = m.ertekeles || "";
+  urlap.elements.jegyzet.value     = m.jegyzet || "";
+  urlapModValtas();
+  kirajzol();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function megse() {
+  szerkesztettId = null;
+  urlapNyitva = false;
+  urlap.reset();
+  urlapModValtas();
+  kirajzol();
+}
+
+urlap.addEventListener("submit", e => {
+  e.preventDefault();
+  const adat = Object.fromEntries(new FormData(e.target));
+  const ertekek = {
+    datum: adat.datum, tipus: adat.tipus, ellenfel: adat.ellenfel, helyszin: adat.helyszin,
+    sajatGol: Number(adat.sajatGol), ellenfelGol: Number(adat.ellenfelGol),
+    gol: Number(adat.gol), assziszt: Number(adat.assziszt), percek: Number(adat.percek),
+    ertekeles: adat.ertekeles, jegyzet: adat.jegyzet
+  };
+  if (szerkesztettId !== null) {
+    const i = meccsek.findIndex(m => m.id === szerkesztettId);
+    meccsek[i] = { id: szerkesztettId, ...ertekek };
+  } else {
+    meccsek.push({ id: Date.now(), ...ertekek });
+  }
+  ment();
+  szerkesztettId = null;
+  urlapNyitva = false;
+  urlap.reset();
+  urlapModValtas();
+  kirajzol();
+});
+
+function torol(id) {
+  if (szerkesztettId === id) megse();
+  meccsek = meccsek.filter(m => m.id !== id);
+  ment();
+  kirajzol();
+}
+
+// ---- 5. Mentés, visszatöltés, CSV -----------------------------------
+function maiDatum() { return new Date().toISOString().slice(0, 10); }
+
+function uzenet(szoveg, baj) {
+  const d = document.getElementById("uzenet");
+  d.textContent = szoveg;
+  d.className = baj ? "uzenet baj" : "uzenet";
+  d.hidden = false;
+  clearTimeout(uzenet._ido);
+  uzenet._ido = setTimeout(() => { d.hidden = true; }, 8000);
+}
+
+// Egy fájl "letöltése" a böngészőből: készítünk egy ideiglenes linket,
+// rákattintunk a nevében, aztán eldobjuk. Nincs szerver, minden helyben történik.
+function letoltes(tartalom, fajlnev, tipus) {
+  const blob = new Blob([tartalom], { type: tipus + ";charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = fajlnev;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function mentesFajlba() {
+  if (!meccsek.length) { uzenet("Nincs mit menteni, még nincs felvitt meccs.", true); return; }
+  letoltes(JSON.stringify(meccsek, null, 2), "foci-naplo-" + maiDatum() + ".json", "application/json");
+  uzenet("Elmentve: " + meccsek.length + " meccs. A fájl a Letöltések mappában van.");
+}
+
+// CSV-ben a magyar Excel pontosvesszőt vár elválasztónak, és kell elé egy
+// láthatatlan jel (BOM), különben elrontja az ékezetes betűket.
+function csvCella(v) {
+  const s = String(v === undefined || v === null ? "" : v);
+  return /[";\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+}
+function csvExport() {
+  if (!meccsek.length) { uzenet("Nincs mit exportálni.", true); return; }
+  const fejlec = ["Dátum","Típus","Ellenfél","Helyszín","Mi","Ők","Gól","Assziszt","Perc","Értékelés","Megjegyzés"];
+  const sorok = idorendben().map(m => [m.datum, m.tipus, m.ellenfel, m.helyszin,
+    m.sajatGol, m.ellenfelGol, m.gol, m.assziszt, m.percek, m.ertekeles, m.jegyzet]);
+  const csv = "\uFEFF" + [fejlec].concat(sorok).map(sor => sor.map(csvCella).join(";")).join("\r\n");
+  letoltes(csv, "foci-naplo-" + maiDatum() + ".csv", "text/csv");
+  uzenet("CSV letöltve. Excelben megnyitható.");
+}
+
+document.getElementById("fajlBe").addEventListener("change", e => {
+  const fajl = e.target.files[0];
+  if (!fajl) return;
+  const olvaso = new FileReader();
+  olvaso.onload = () => {
+    try {
+      const be = JSON.parse(olvaso.result);
+      // Mielőtt bármit felülírnánk: tényleg meccsnapló ez a fájl?
+      if (!Array.isArray(be)) throw new Error("a fájl nem meccslistát tartalmaz");
+      if (be.some(m => !m || typeof m.datum !== "string" || !m.datum))
+        throw new Error("van olyan sor, amiben nincs dátum");
+
+      const kerdes = "A visszatöltés lecseréli a mostani " + meccsek.length
+                   + " meccset a fájlban lévő " + be.length + " meccsre.\n\nFolytatod?";
+      if (!confirm(kerdes)) { e.target.value = ""; return; }
+
+      // Friss azonosítót adunk mindegyiknek, hogy biztosan ne ütközzenek.
+      meccsek = be.map((m, i) => Object.assign({}, m, { id: Date.now() + i }));
+      megse();
+      ment();
+      kirajzol();
+      uzenet("Visszatöltve: " + meccsek.length + " meccs.");
+    } catch (hiba) {
+      uzenet("Ez nem tűnik meccsnapló mentésnek: " + hiba.message + ". Az adataid érintetlenek.", true);
+    }
+    e.target.value = "";
+  };
+  olvaso.onerror = () => uzenet("Nem sikerült beolvasni a fájlt.", true);
+  olvaso.readAsText(fajl);
+});
+
+// ---- 6. Indulás -----------------------------------------------------
+betolt();
+urlapModValtas();
+kirajzol();
+</script>
+</body>
+</html>
