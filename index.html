@@ -16,6 +16,7 @@
   --accent:#1c6b45;  --accent-halvany:#e7f0ea;
   --gyoz:#15764a;    --veszt:#b8402f;
   --s1:#2a78d6;      --s2:#eb6834;      --s3:#4a3aa7;
+  --figyel:#8a5a00;  --figyel-hatter:#fbf3df;  --figyel-keret:#ecd9a8;
   --display:"Archivo", system-ui, sans-serif;
   --body:"IBM Plex Sans", system-ui, -apple-system, sans-serif;
   --mono:"IBM Plex Mono", ui-monospace, "SF Mono", monospace;
@@ -28,6 +29,7 @@
     --accent:#56ab80;  --accent-halvany:#1a2a22;
     --gyoz:#56ab80;    --veszt:#e08878;
     --s1:#3987e5;      --s2:#d95926;      --s3:#9085e9;
+    --figyel:#e3b654;  --figyel-hatter:#262015;  --figyel-keret:#4a3d1f;
   }
 }
 
@@ -125,6 +127,16 @@ figcaption { font-family:var(--display); font-weight:600; font-size:14px; }
 .ures { color:var(--ink3); padding:34px 0; text-align:center; }
 
 
+/* ---- Mentési emlékeztető ------------------------------------------ */
+[hidden] { display:none !important; }
+.emlekezteto { display:flex; align-items:center; justify-content:space-between;
+               gap:12px 20px; flex-wrap:wrap; padding:12px 16px; margin-bottom:24px;
+               background:var(--figyel-hatter); border:1px solid var(--figyel-keret);
+               border-radius:8px; font-size:14px; }
+.emlekezteto strong { color:var(--figyel); }
+.emlGombok { display:flex; align-items:center; gap:8px; }
+.fogomb.kicsi { padding:6px 14px; font-size:13px; }
+
 /* ---- Adatok sáv ---------------------------------------------------- */
 .adatsav { margin-top:44px; padding-top:22px; border-top:1px solid var(--vonal); }
 .adatsav h2 { font-size:13px; text-transform:uppercase; letter-spacing:.09em;
@@ -134,6 +146,7 @@ figcaption { font-family:var(--display); font-weight:600; font-size:14px; }
                border:1px solid var(--vonal); background:var(--surface); color:var(--ink); }
 .halvanygomb:hover { border-color:var(--accent); color:var(--accent); }
 .adatsav p { font-size:13px; color:var(--ink3); margin:0; max-width:64ch; }
+.adatsav .utolsoMentes { margin-top:8px; color:var(--ink2); }
 .uzenet { font-size:13px; margin-top:12px; padding:9px 12px; border-radius:6px;
           background:var(--accent-halvany); color:var(--accent); }
 .uzenet.baj { background:transparent; color:var(--veszt); border:1px solid var(--veszt); }
@@ -151,6 +164,14 @@ figcaption { font-family:var(--display); font-weight:600; font-size:14px; }
 </head>
 <body>
 <div class="wrap">
+
+  <div class="emlekezteto" id="emlekezteto" role="status" hidden>
+    <div><strong>Nincs friss mentés.</strong> <span id="emlReszlet"></span></div>
+    <div class="emlGombok">
+      <button type="button" class="fogomb kicsi" onclick="mentesFajlba()">Mentés most</button>
+      <button type="button" class="szoveggomb" onclick="emlekeztetoKesobb()">Később</button>
+    </div>
+  </div>
 
   <header class="fejlec">
     <div>
@@ -235,6 +256,7 @@ figcaption { font-family:var(--display); font-weight:600; font-size:14px; }
     <p>A meccsek a böngésződ tárolójában vannak, ezen a gépen. Ha kitakarítod a böngésző
        adatait, elvesznek — ezért érdemes időnként fájlba menteni. A mentett fájlból
        bármikor visszatölthető minden.</p>
+    <p class="utolsoMentes" id="utolsoMentes"></p>
     <div id="uzenet" hidden></div>
   </section>
 
@@ -460,6 +482,7 @@ urlap.addEventListener("submit", e => {
     meccsek.push({ id: Date.now(), ...ertekek });
   }
   ment();
+  jelolValtozas();
   szerkesztettId = null;
   urlapNyitva = false;
   urlap.reset();
@@ -471,6 +494,7 @@ function torol(id) {
   if (szerkesztettId === id) megse();
   meccsek = meccsek.filter(m => m.id !== id);
   ment();
+  jelolValtozas();
   kirajzol();
 }
 
@@ -503,6 +527,7 @@ function letoltes(tartalom, fajlnev, tipus) {
 function mentesFajlba() {
   if (!meccsek.length) { uzenet("Nincs mit menteni, még nincs felvitt meccs.", true); return; }
   letoltes(JSON.stringify(meccsek, null, 2), "foci-naplo-" + maiDatum() + ".json", "application/json");
+  jelolMentes();
   uzenet("Elmentve: " + meccsek.length + " meccs. A fájl a Letöltések mappában van.");
 }
 
@@ -544,6 +569,7 @@ document.getElementById("fajlBe").addEventListener("change", e => {
       ment();
       kirajzol();
       uzenet("Visszatöltve: " + meccsek.length + " meccs.");
+      jelolMentes();
     } catch (hiba) {
       uzenet("Ez nem tűnik meccsnapló mentésnek: " + hiba.message + ". Az adataid érintetlenek.", true);
     }
@@ -553,10 +579,60 @@ document.getElementById("fajlBe").addEventListener("change", e => {
   olvaso.readAsText(fajl);
 });
 
-// ---- 6. Indulás -----------------------------------------------------
+// ---- 6. Mentési emlékeztető -----------------------------------------
+// Két időpontot tartunk nyilván: mikor változott utoljára az adat, és mikor
+// volt utoljára fájlba mentés vagy visszatöltés. Ha a változás frissebb,
+// akkor van mentetlen módosítás.
+const META_KULCS = "foci-naplo-meta";
+let meta = { utolsoMentes: null, utolsoValtozas: null };
+let emlekeztetoElhalasztva = false;   // "Később": csak erre a megnyitásra szól
+
+function metaBetolt() {
+  try { meta = Object.assign(meta, JSON.parse(localStorage.getItem(META_KULCS)) || {}); }
+  catch (e) {}
+}
+function metaMent() {
+  try { localStorage.setItem(META_KULCS, JSON.stringify(meta)); } catch (e) {}
+}
+
+// Hány naptári nap telt el egy időpont óta (ma = 0, tegnap = 1)
+function napokOta(ido) {
+  const akkor = new Date(ido); akkor.setHours(0, 0, 0, 0);
+  const ma = new Date();       ma.setHours(0, 0, 0, 0);
+  return Math.round((ma - akkor) / 86400000);
+}
+function mikorSzoveg(ido) {
+  if (!ido) return "még nem volt";
+  const n = napokOta(ido);
+  return n === 0 ? "ma" : (n === 1 ? "tegnap" : n + " napja");
+}
+
+function vanMentetlen() {
+  if (!meccsek.length) return false;
+  if (!meta.utolsoMentes) return true;
+  return (meta.utolsoValtozas || 0) > meta.utolsoMentes;
+}
+
+function jelolValtozas() { meta.utolsoValtozas = Date.now(); metaMent(); emlekeztetoFrissit(); }
+function jelolMentes()   { meta.utolsoMentes = Date.now(); metaMent(); emlekeztetoElhalasztva = false; emlekeztetoFrissit(); }
+function emlekeztetoKesobb() { emlekeztetoElhalasztva = true; emlekeztetoFrissit(); }
+
+// Egy hely dönti el, látszik-e az emlékeztető; a felület ebből következik.
+function emlekeztetoFrissit() {
+  const esedekes = vanMentetlen() && (!meta.utolsoMentes || napokOta(meta.utolsoMentes) >= 1);
+  document.getElementById("emlekezteto").hidden = !esedekes || emlekeztetoElhalasztva;
+  document.getElementById("emlReszlet").textContent = meta.utolsoMentes
+    ? "Utolsó mentés: " + mikorSzoveg(meta.utolsoMentes) + ". Ha a böngésző adatai törlődnek, az azóta felvitt meccsek elvesznek."
+    : "Még egyszer sem mentettél fájlba. Ha a böngésző adatai törlődnek, a meccsek elvesznek.";
+  document.getElementById("utolsoMentes").textContent = "Utolsó mentés: " + mikorSzoveg(meta.utolsoMentes) + ".";
+}
+
+// ---- 7. Indulás -----------------------------------------------------
 betolt();
+metaBetolt();
 urlapModValtas();
 kirajzol();
+emlekeztetoFrissit();
 </script>
 </body>
 </html>
