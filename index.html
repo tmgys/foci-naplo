@@ -97,6 +97,20 @@ figcaption { font-family:var(--display); font-weight:600; font-size:14px; }
 .jelmagy span { display:inline-flex; align-items:center; gap:6px; }
 .kocka { width:9px; height:9px; border-radius:2px; }
 
+/* ---- Megerősítő ablak --------------------------------------------- */
+.modalHatter { position:fixed; inset:0; z-index:50; padding:16px;
+               background:rgba(0,0,0,.45); display:flex; align-items:center; justify-content:center; }
+.modal { width:100%; max-width:400px; padding:22px; background:var(--surface);
+         border:1px solid var(--vonal); border-radius:10px; box-shadow:0 12px 32px rgba(0,0,0,.2); }
+.modal h2 { font-size:17px; margin-bottom:10px; }
+.modal p { margin:0 0 6px; font-size:14px; }
+.modal .melyik { font-family:var(--mono); font-size:14px; }
+.modal .figyelmeztet { color:var(--ink3); font-size:13px; margin-bottom:20px; }
+.modalGombok { display:flex; justify-content:flex-end; gap:10px; }
+.veszelyes { font-family:var(--body); font-size:14px; font-weight:500; padding:8px 18px;
+             border:1px solid var(--veszt); background:var(--veszt); color:#fff; border-radius:6px; }
+.veszelyes:hover { filter:brightness(1.08); }
+
 /* ---- Meccslista ---------------------------------------------------- */
 .szekcioCim { font-size:13px; text-transform:uppercase; letter-spacing:.09em;
               color:var(--ink3); font-family:var(--body); font-weight:600;
@@ -259,6 +273,19 @@ figcaption { font-family:var(--display); font-weight:600; font-size:14px; }
     <p class="utolsoMentes" id="utolsoMentes"></p>
     <div id="uzenet" hidden></div>
   </section>
+
+  <div class="modalHatter" id="torlesModal" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="torlesCim">
+      <h2 id="torlesCim">Meccs törlése</h2>
+      <p>Biztosan törölni szeretnéd ezt a meccset?</p>
+      <p class="melyik" id="torlesReszlet"></p>
+      <p class="figyelmeztet">Ez a művelet nem vonható vissza.</p>
+      <div class="modalGombok">
+        <button type="button" class="halvanygomb" id="torlesMegseGomb" onclick="torlesMegse()">Mégse</button>
+        <button type="button" class="veszelyes" onclick="torlesMegerosit()">Törlés</button>
+      </div>
+    </div>
+  </div>
 
 </div>
 
@@ -490,12 +517,10 @@ urlap.addEventListener("submit", e => {
   kirajzol();
 });
 
+// A "töröl" gomb mostantól csak megkérdez; a tényleges törlés a
+// megerősítő ablakban történik (lásd a 7. szakaszt).
 function torol(id) {
-  if (szerkesztettId === id) megse();
-  meccsek = meccsek.filter(m => m.id !== id);
-  ment();
-  jelolValtozas();
-  kirajzol();
+  torlesKerdes(id);
 }
 
 // ---- 5. Mentés, visszatöltés, CSV -----------------------------------
@@ -627,7 +652,46 @@ function emlekeztetoFrissit() {
   document.getElementById("utolsoMentes").textContent = "Utolsó mentés: " + mikorSzoveg(meta.utolsoMentes) + ".";
 }
 
-// ---- 7. Indulás -----------------------------------------------------
+// ---- 7. Törlés megerősítése -----------------------------------------
+// Egy hely dönti el, nyitva van-e az ablak és melyik meccsről szól:
+// ha torlendoId null, az ablak zárva van.
+let torlendoId = null;
+
+function torlesKerdes(id) {
+  const m = meccsek.find(x => x.id === id);
+  if (!m) return;
+  torlendoId = id;
+  document.getElementById("torlesReszlet").textContent =
+    m.datum + "  ·  " + (m.ellenfel || "ismeretlen ellenfél") + "  ·  " + m.sajatGol + " : " + m.ellenfelGol;
+  document.getElementById("torlesModal").hidden = false;
+  document.getElementById("torlesMegseGomb").focus();   // a biztonságos gomb kapja a fókuszt
+}
+
+function torlesMegse() {
+  torlendoId = null;
+  document.getElementById("torlesModal").hidden = true;
+}
+
+function torlesMegerosit() {
+  const id = torlendoId;
+  torlesMegse();
+  if (id === null) return;
+  if (szerkesztettId === id) megse();      // ha épp ezt szerkesztetted, az űrlap bezárul
+  meccsek = meccsek.filter(m => m.id !== id);
+  ment();
+  jelolValtozas();
+  kirajzol();
+}
+
+// Esc és a sötét háttérre kattintás is Mégse
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape" && torlendoId !== null) torlesMegse();
+});
+document.getElementById("torlesModal").addEventListener("click", e => {
+  if (e.target.id === "torlesModal") torlesMegse();
+});
+
+// ---- 8. Indulás -----------------------------------------------------
 betolt();
 metaBetolt();
 urlapModValtas();
