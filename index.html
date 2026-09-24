@@ -56,6 +56,10 @@ button { font:inherit; cursor:pointer; border-radius:6px; }
 .szoveggomb { border:none; background:none; color:var(--ink3);
               font-size:13px; padding:3px 5px; text-decoration:underline; }
 .szoveggomb:hover { color:var(--ink); }
+.szezonSor { display:flex; align-items:center; gap:6px; margin:0 0 4px; }
+.szezonSor label { display:inline; margin:0; }
+.szezonSor select { width:auto; height:28px; padding:0 6px; font-size:13px; font-weight:600;
+                    font-variant-numeric:tabular-nums; }
 :focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
 
 /* ---- Szezonösszesítő ----------------------------------------------- */
@@ -189,7 +193,10 @@ figcaption { font-family:var(--display); font-weight:600; font-size:14px; }
 
   <header class="fejlec">
     <div>
-      <p class="eyebrow">Szezon 2026/27</p>
+      <div class="szezonSor">
+        <label class="eyebrow" for="szezonValaszto">Szezon</label>
+        <select id="szezonValaszto" onchange="szezonValt(this.value)"></select>
+      </div>
       <h1>Focimeccs-napló</h1>
     </div>
     <button class="fogomb" id="nyitGomb" onclick="urlapNyit()">Új meccs</button>
@@ -256,7 +263,7 @@ figcaption { font-family:var(--display); font-weight:600; font-size:14px; }
   <section>
     <h2 class="szekcioCim">Meccsek</h2>
     <div id="sorok"></div>
-    <p class="ures" id="ures">Még nincs felvitt meccs. Kezdd az „Új meccs" gombbal.</p>
+    <p class="ures" id="ures"></p>
   </section>
 
   <section class="adatsav">
@@ -311,7 +318,7 @@ function escape_(s) {
   return String(s).replace(/[&<>"]/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" }[c]));
 }
 function r1(n) { return Math.round(n * 10) / 10; }
-function idorendben() { return [...meccsek].sort((a,b) => a.datum.localeCompare(b.datum)); }
+function idorendben(lista = meccsek) { return [...lista].sort((a,b) => a.datum.localeCompare(b.datum)); }
 function napHonap(d) { return d ? d.slice(5).replace("-", ".") : ""; }
 
 // ---- 2. Diagramok (SVG, külső könyvtár nélkül) ----------------------
@@ -340,9 +347,9 @@ function oszlop(x, tetejeY, w, h, kerek, szin, cim) {
   return "<path d='" + d + "' fill='" + szin + "'><title>" + escape_(cim) + "</title></path>";
 }
 
-function rajzolGolChart() {
+function rajzolGolChart(lista) {
   const doboz = document.getElementById("chartGol");
-  const adat = idorendben();
+  const adat = idorendben(lista);
   if (!adat.length) { doboz.innerHTML = "<p class='ures'>Nincs még adat.</p>"; return; }
 
   const max = Math.max(3, ...adat.map(m => Number(m.gol||0) + Number(m.assziszt||0)));
@@ -370,9 +377,9 @@ function rajzolGolChart() {
   doboz.innerHTML = svg(s);
 }
 
-function rajzolErtChart() {
+function rajzolErtChart(lista) {
   const doboz = document.getElementById("chartErt");
-  const adat = idorendben().filter(m => m.ertekeles);
+  const adat = idorendben(lista).filter(m => m.ertekeles);
   if (!adat.length) { doboz.innerHTML = "<p class='ures'>Még nincs értékelt meccs.</p>"; return; }
 
   const y = v => FENT + PH - ((v - 1) / 4) * PH;
@@ -404,8 +411,15 @@ function ertekelesJelolo(ertek) {
 }
 
 function kirajzol() {
-  const rendezett = [...meccsek].sort((a, b) => b.datum.localeCompare(a.datum));
-  document.getElementById("ures").hidden = meccsek.length > 0;
+  // Minden, ami itt látszik, a választott szezon meccseiből dolgozik (lásd 8. szakasz).
+  szezonValasztoFrissit();
+  const lathato = szezonMeccsei();
+  const rendezett = [...lathato].sort((a, b) => b.datum.localeCompare(a.datum));
+  const ures = document.getElementById("ures");
+  ures.hidden = lathato.length > 0;
+  ures.textContent = meccsek.length
+    ? "Ebben a szezonban még nincs meccs."
+    : "Még nincs felvitt meccs. Kezdd az „Új meccs” gombbal.";
 
   document.getElementById("sorok").innerHTML = rendezett.map(m => {
     const jel  = m.sajatGol > m.ellenfelGol ? "gy" : (m.sajatGol < m.ellenfelGol ? "v" : "d");
@@ -430,18 +444,18 @@ function kirajzol() {
       + "</article>";
   }).join("");
 
-  const osszeg = mezo => meccsek.reduce((s, m) => s + Number(m[mezo] || 0), 0);
-  const ertekeltek = meccsek.filter(m => m.ertekeles);
+  const osszeg = mezo => lathato.reduce((s, m) => s + Number(m[mezo] || 0), 0);
+  const ertekeltek = lathato.filter(m => m.ertekeles);
   const atlag = ertekeltek.length
     ? (ertekeltek.reduce((s, m) => s + Number(m.ertekeles), 0) / ertekeltek.length).toFixed(1) : "–";
 
   document.getElementById("statok").innerHTML = [
-    ["Meccs", meccsek.length], ["Gól", osszeg("gol")], ["Assziszt", osszeg("assziszt")],
+    ["Meccs", lathato.length], ["Gól", osszeg("gol")], ["Assziszt", osszeg("assziszt")],
     ["Játszott perc", osszeg("percek")], ["Átlag értékelés", atlag]
   ].map(s => "<div class='tetel'><div class='ertek'>" + s[1] + "</div><div class='cimke'>" + s[0] + "</div></div>").join("");
 
-  rajzolGolChart();
-  rajzolErtChart();
+  rajzolGolChart(lathato);
+  rajzolErtChart(lathato);
 }
 
 // Az űrlap kinézete két dologból következik: nyitva van-e, és szerkesztünk-e.
@@ -510,6 +524,7 @@ urlap.addEventListener("submit", e => {
   }
   ment();
   jelolValtozas();
+  valasztottSzezon = szezonDatumbol(ertekek.datum);   // oda váltunk, ahova a meccs került
   szerkesztettId = null;
   urlapNyitva = false;
   urlap.reset();
@@ -590,6 +605,7 @@ document.getElementById("fajlBe").addEventListener("change", e => {
 
       // Friss azonosítót adunk mindegyiknek, hogy biztosan ne ütközzenek.
       meccsek = be.map((m, i) => Object.assign({}, m, { id: Date.now() + i }));
+      valasztottSzezon = aktualisSzezon();
       megse();
       ment();
       kirajzol();
@@ -691,7 +707,62 @@ document.getElementById("torlesModal").addEventListener("click", e => {
   if (e.target.id === "torlesModal") torlesMegse();
 });
 
-// ---- 8. Indulás -----------------------------------------------------
+// ---- 8. Szezon ------------------------------------------------------
+// A szezon nincs eltárolva: a meccs dátumából számoljuk.
+// Egy szezon július 1-jén kezdődik és június 30-án ér véget
+// (a júliusi felkészülés már az új szezonhoz tartozik).
+// Egy szezont a kezdő évével jelölünk: 2026 = 2026/27.
+//
+// FONTOS: a szezon csak azt szűri, ami LÁTSZIK (lista, összesítő, diagramok).
+// A fájlba mentés, a CSV export és a visszatöltés mindig az összes meccsel dolgozik.
+const SZEZON_KEZDO_HONAP = 7;   // július
+
+function szezonDatumbol(datum) {
+  const ev = Number(String(datum).slice(0, 4));
+  const honap = Number(String(datum).slice(5, 7));
+  if (!ev || !honap) return aktualisSzezon();   // hibás dátum: ne vesszen el, az aktuálisban látszik
+  return honap >= SZEZON_KEZDO_HONAP ? ev : ev - 1;
+}
+
+function aktualisSzezon() {
+  const ma = new Date();   // a telefon saját (helyi) ideje szerint
+  return ma.getMonth() + 1 >= SZEZON_KEZDO_HONAP ? ma.getFullYear() : ma.getFullYear() - 1;
+}
+
+function szezonCimke(szezon) {
+  return szezon + "/" + String((szezon + 1) % 100).padStart(2, "0");
+}
+
+// Választható szezonok: amelyikben van meccs, plusz mindig az aktuális. Legújabb elöl.
+function elerhetoSzezonok() {
+  const halmaz = new Set(meccsek.map(m => szezonDatumbol(m.datum)));
+  halmaz.add(aktualisSzezon());
+  return [...halmaz].sort((a, b) => b - a);
+}
+
+// Egy hely dönti el, melyik szezon látszik.
+let valasztottSzezon = aktualisSzezon();
+
+function szezonMeccsei() {
+  return meccsek.filter(m => szezonDatumbol(m.datum) === valasztottSzezon);
+}
+
+// A választó a valasztottSzezon-ból következik. Ha a választott szezon
+// közben megszűnt (kitörölted az utolsó meccsét), visszaállunk az aktuálisra.
+function szezonValasztoFrissit() {
+  const lista = elerhetoSzezonok();
+  if (!lista.includes(valasztottSzezon)) valasztottSzezon = aktualisSzezon();
+  document.getElementById("szezonValaszto").innerHTML = lista.map(sz =>
+    "<option value='" + sz + "'" + (sz === valasztottSzezon ? " selected" : "") + ">"
+    + szezonCimke(sz) + "</option>").join("");
+}
+
+function szezonValt(ertek) {
+  valasztottSzezon = Number(ertek);
+  kirajzol();
+}
+
+// ---- 9. Indulás -----------------------------------------------------
 betolt();
 metaBetolt();
 urlapModValtas();

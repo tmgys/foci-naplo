@@ -8,7 +8,7 @@ Ez a fájl a coding agenteknek szól. Olvasd el, mielőtt bármit módosítasz.
 ## Mi ez
 
 Focimeccs-napló: egy gyerek meccseinek nyilvántartása. Felvitel, szerkesztés,
-törlés, szezonösszesítő, két diagram, mentés fájlba és visszatöltés.
+törlés, szezonválasztó, szezonösszesítő, két diagram, mentés fájlba és visszatöltés.
 
 Élőben: https://tmgys.github.io/foci-naplo/ (GitHub Pages, a `main` ágról).
 A tulajdonos telefonon használja, a kezdőképernyőre kitéve.
@@ -16,7 +16,7 @@ A tulajdonos telefonon használja, a kezdőképernyőre kitéve.
 ## Mi van a mappában
 
 ```
-index.html    a teljes alkalmazás — HTML + CSS + JS egy fájlban (~700 sor)
+index.html    a teljes alkalmazás — HTML + CSS + JS egy fájlban (~770 sor)
 .gitignore    kizárja a mentés- és exportfájlokat (foci-naplo-*.json / *.csv)
 AGENTS.md     ez a fájl
 ```
@@ -29,9 +29,9 @@ közvetlenül megnyitja. Egyetlen külső erőforrás a Google Fonts
 
 - `<style>` — design tokenek a `:root`-ban, sötét mód a
   `@media (prefers-color-scheme: dark)` blokkban, utána a komponensek
-- `<body>` — emlékeztető sáv, fejléc, összesítő, űrlap panel, diagramok,
+- `<body>` — emlékeztető sáv, fejléc (benne a szezonválasztó), összesítő, űrlap panel, diagramok,
   meccslista, Adatok sáv, törlés megerősítő ablak
-- `<script>` — nyolc számozott szakasz:
+- `<script>` — kilenc számozott szakasz:
 
 | Szakasz | Miről szól |
 |---|---|
@@ -42,7 +42,8 @@ közvetlenül megnyitja. Egyetlen külső erőforrás a Google Fonts
 | 5. Mentés, visszatöltés, CSV | `mentesFajlba`, `csvExport`, fájl beolvasás |
 | 6. Mentési emlékeztető | `emlekeztetoFrissit` és a hozzá tartozó állapot |
 | 7. Törlés megerősítése | `torlesKerdes`, `torlesMegse`, `torlesMegerosit` |
-| 8. Indulás | betöltés és első kirajzolás |
+| 8. Szezon | `szezonDatumbol`, `aktualisSzezon`, `szezonMeccsei`, `szezonValasztoFrissit`, `szezonValt` |
+| 9. Indulás | betöltés és első kirajzolás |
 
 ## Adatok
 
@@ -66,6 +67,12 @@ Az adat eszközönként külön él (telefon és gép nem látja egymásét).
 `foci-naplo-meta` — `{ utolsoMentes, utolsoValtozas }`, időbélyegek.
 Mentésnek a **fájlba mentés** és a **visszatöltés** számít, a CSV export nem.
 
+**Szezon:** nincs eltárolva, a `datum`-ból számoljuk. Egy szezon július 1-jétől
+június 30-ig tart (a júliusi felkészülés már az új szezon). Jelölése a kezdő év:
+`2026` = „2026/27". Választható: amelyikben van meccs, plusz mindig az aktuális.
+Nyitáskor a mai dátum szerinti szezon látszik. Ha egy felvitt vagy szerkesztett
+meccs más szezonba esik, az app átvált arra.
+
 Régi adatokban hiányozhatnak mezők — mindig legyen tartalék érték
 (`m.tipus || "–"`).
 
@@ -82,7 +89,12 @@ Régi adatokban hiányozhatnak mezők — mindig legyen tartalék érték
   rajzolt SVG-k, és annak is kell maradniuk.
 - **Egy hely dönt egy dologról**, a felület ebből következik.
   Ilyen állapotok: `szerkesztettId`, `urlapNyitva`, `torlendoId`,
-  `emlekeztetoElhalasztva`. Ne állítgass felületi elemeket szétszórva.
+  `emlekeztetoElhalasztva`, `valasztottSzezon`. Ne állítgass felületi elemeket szétszórva.
+- **Szűrő soha nem hat az adatmozgatásra.** A szezon (és bármilyen jövőbeli
+  szűrő) csak azt szűri, ami látszik: lista, összesítő, diagramok. A fájlba
+  mentés, a CSV export, a visszatöltés és a mentési emlékeztető mindig az
+  összes meccsel (`meccsek`) dolgozik. Különben egy mentésből csendben
+  kimaradnának a többi szezon meccsei.
 
 **Kinézet**
 - Színt csak tokenből (`var(--ink)`, `var(--accent)`, …). **Beégetett
