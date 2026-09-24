@@ -100,7 +100,11 @@ Régi adatokban hiányozhatnak mezők — mindig legyen tartalék érték
   rajzolt SVG-k, és annak is kell maradniuk.
 - **Egy hely dönt egy dologról**, a felület ebből következik.
   Ilyen állapotok: `szerkesztettId`, `urlapNyitva`, `torlendoId`,
-  `emlekeztetoElhalasztva`, `valasztottSzezon`, `szuletesiEv`, `korKerdesNyitva`. Ne állítgass felületi elemeket szétszórva.
+  `emlekeztetoElhalasztva`, `valasztottSzezon`, `szuletesiEv`, `korKerdesNyitva`.
+  Ne állítgass felületi elemeket szétszórva.
+- **Új ablak a meglévő minta szerint** (`.modalHatter` + `.modal`, mint a törlés
+  és a korosztály ablaka): Esc és háttérre kattintás = a biztonságos kilépés,
+  a fókusz a biztonságos gombon vagy a beviteli mezőn indul.
 - **Szűrő soha nem hat az adatmozgatásra.** A szezon (és bármilyen jövőbeli
   szűrő) csak azt szűri, ami látszik: lista, összesítő, diagramok. A fájlba
   mentés, a CSV export, a visszatöltés és a mentési emlékeztető mindig az
@@ -125,19 +129,40 @@ Régi adatokban hiányozhatnak mezők — mindig legyen tartalék érték
 - A megerősítő ablak írja ki, **mire** vonatkozik — ne csak annyit, hogy „Biztos?”.
 - `localStorage` írás/olvasás mindig `try/catch`-ben.
 - Felhasználói szöveg megjelenítése előtt `escape_()`.
+- **Személyes adat** (pl. a születési év) csak a böngészőben él. Nem kerülhet
+  a kódba (a repo nyilvános), és a mentésfájlba vagy a CSV-be sem, hacsak a
+  tulajdonos kifejezetten nem kéri. Ha egy új funkció új személyes adatot hoz,
+  **kérdezz rá**, hol tárolódjon.
 
 ## Munkamenet
 
-1. **Előbb terv, kódolás nélkül.** Írd le a feltételezéseidet is, ott ahol
+1. **Ha a kérés nem egyértelmű, előbb kérdezz — egyesével**, mindegyikhez
+   2–3 lehetőséggel és a javaslatoddal. Ez bevált: rejtett döntéseket hoz
+   elő (pl. hova esik a júliusi meccs).
+2. **Utána terv, kódolás nélkül.** Írd le a feltételezéseidet is, ott ahol
    a kérés nem volt egyértelmű. Várj jóváhagyásra.
-2. **Külön feature ágon dolgozz**, ne a `main`-en. Egy ág, egy téma.
-3. Kódolás után ellenőrizd: JS szintaxis, valósághű mennyiségű próbaadat,
+3. **Külön feature ágon dolgozz**, ne a `main`-en. Egy ág, egy téma.
+   Kódolás előtt ellenőrizd, hogy tényleg azon az ágon vagy
+   (`git branch --show-current`); ha nem, szólj, és várj.
+4. Kódolás után ellenőrizd: JS szintaxis, valósághű mennyiségű próbaadat,
    **világos + sötét + telefon** nézet, és a hibás utak is (Mégse,
-   félbehagyás, rossz fájl).
-4. **Ne commitolj.** A commitot, merge-öt és pusht a tulajdonos végzi a
-   Terminálból és a VS Code-ból.
-5. A munka végén sorold fel, milyen döntéseket hoztál, amik nem voltak
+   félbehagyás, rossz fájl, hibás bemenet), valamint a határnapok.
+   **Futtasd újra a korábbi funkciók ellenőrzését is.** Ha egy meglévő
+   tesztet módosítanod kell, mondd meg, melyiket és miért.
+5. **Ne commitolj.** A commitot, merge-öt és pusht a tulajdonos végzi a
+   Terminálból és a VS Code-ból. A sorrend: kipróbálás → diff → commit →
+   merge → push. Emlékeztesd rá, ha kimaradna a diff.
+6. A munka végén sorold fel, milyen döntéseket hoztál, amik nem voltak
    a tervben.
+
+**Tesztelési tudnivalók**
+- Helyben (`file://`) megnyitva a napló üres: a böngésző címenként külön
+  tárol. Próbaadatot a `localStorage`-ba kell tölteni, vagy egy mentésből
+  visszatölteni.
+- Ha nincs `foci-naplo-beallitas`, induláskor feljön a korosztály-kérdés, és
+  eltakarja a gombokat. Automata tesztnél töltsd be előre
+  (`{"szuletesiEv":2017}`), kivéve ha épp ezt az ablakot teszteled.
+- A szezon és a korosztály a mai dátumtól függ: teszthez rögzítsd az időt.
 
 ## Hogyan kommunikálj
 
