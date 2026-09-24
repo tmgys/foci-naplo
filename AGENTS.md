@@ -8,7 +8,7 @@ Ez a fájl a coding agenteknek szól. Olvasd el, mielőtt bármit módosítasz.
 ## Mi ez
 
 Focimeccs-napló: egy gyerek meccseinek nyilvántartása. Felvitel, szerkesztés,
-törlés, szezonválasztó, szezonösszesítő, két diagram, mentés fájlba és visszatöltés.
+törlés, szezonválasztó, korosztály, szezonösszesítő, két diagram, mentés fájlba és visszatöltés.
 
 Élőben: https://tmgys.github.io/foci-naplo/ (GitHub Pages, a `main` ágról).
 A tulajdonos telefonon használja, a kezdőképernyőre kitéve.
@@ -16,7 +16,7 @@ A tulajdonos telefonon használja, a kezdőképernyőre kitéve.
 ## Mi van a mappában
 
 ```
-index.html    a teljes alkalmazás — HTML + CSS + JS egy fájlban (~770 sor)
+index.html    a teljes alkalmazás — HTML + CSS + JS egy fájlban (~900 sor)
 .gitignore    kizárja a mentés- és exportfájlokat (foci-naplo-*.json / *.csv)
 AGENTS.md     ez a fájl
 ```
@@ -29,9 +29,9 @@ közvetlenül megnyitja. Egyetlen külső erőforrás a Google Fonts
 
 - `<style>` — design tokenek a `:root`-ban, sötét mód a
   `@media (prefers-color-scheme: dark)` blokkban, utána a komponensek
-- `<body>` — emlékeztető sáv, fejléc (benne a szezonválasztó), összesítő, űrlap panel, diagramok,
-  meccslista, Adatok sáv, törlés megerősítő ablak
-- `<script>` — kilenc számozott szakasz:
+- `<body>` — emlékeztető sáv, fejléc (benne a szezonválasztó és a korosztály), összesítő, űrlap panel, diagramok,
+  meccslista, Adatok sáv, törlés megerősítő ablak, korosztály-kérdés ablak
+- `<script>` — tíz számozott szakasz:
 
 | Szakasz | Miről szól |
 |---|---|
@@ -43,11 +43,12 @@ közvetlenül megnyitja. Egyetlen külső erőforrás a Google Fonts
 | 6. Mentési emlékeztető | `emlekeztetoFrissit` és a hozzá tartozó állapot |
 | 7. Törlés megerősítése | `torlesKerdes`, `torlesMegse`, `torlesMegerosit` |
 | 8. Szezon | `szezonDatumbol`, `aktualisSzezon`, `szezonMeccsei`, `szezonValasztoFrissit`, `szezonValt` |
-| 9. Indulás | betöltés és első kirajzolás |
+| 9. Korosztály | `korosztaly`, `korosztalyFrissit`, `korKerdesNyit`, `korKerdesBezar`, beállítás betöltés/mentés |
+| 10. Indulás | betöltés, első kirajzolás, korosztály-kérdés ha nincs születési év |
 
 ## Adatok
 
-Minden a böngésző `localStorage`-ában, két kulcs alatt. Szerver nincs.
+Minden a böngésző `localStorage`-ában, három kulcs alatt. Szerver nincs.
 Az adat eszközönként külön él (telefon és gép nem látja egymásét).
 
 `foci-naplo` — a meccsek tömbje:
@@ -67,11 +68,21 @@ Az adat eszközönként külön él (telefon és gép nem látja egymásét).
 `foci-naplo-meta` — `{ utolsoMentes, utolsoValtozas }`, időbélyegek.
 Mentésnek a **fájlba mentés** és a **visszatöltés** számít, a CSV export nem.
 
+`foci-naplo-beallitas` — `{ szuletesiEv }`, egész szám 1990 és a mostani év
+között. **Személyes adat:** csak itt él. Nem kerül a kódba, a mentésfájlba,
+a CSV-be, és a visszatöltés nem nyúl hozzá. Eszközönként egyszer kell megadni.
+
 **Szezon:** nincs eltárolva, a `datum`-ból számoljuk. Egy szezon július 1-jétől
 június 30-ig tart (a júliusi felkészülés már az új szezon). Jelölése a kezdő év:
 `2026` = „2026/27". Választható: amelyikben van meccs, plusz mindig az aktuális.
 Nyitáskor a mai dátum szerinti szezon látszik. Ha egy felvitt vagy szerkesztett
 meccs más szezonba esik, az app átvált arra.
+
+**Korosztály:** nincs eltárolva. A kiválasztott szezon záró éve − születési év
+(2017-es gyerek, 2025/26 → U9, 2026/27 → U10), tehát a szezonnal együtt vált.
+U21 fölött „Felnőtt", U6 alatt is szám (U5…), a születés előtti szezonnál semmi.
+Ha nincs megadva, induláskor rákérdez (kihagyható „Később"-vel); a fejlécben
+„módosít" linkkel javítható.
 
 Régi adatokban hiányozhatnak mezők — mindig legyen tartalék érték
 (`m.tipus || "–"`).
@@ -89,7 +100,7 @@ Régi adatokban hiányozhatnak mezők — mindig legyen tartalék érték
   rajzolt SVG-k, és annak is kell maradniuk.
 - **Egy hely dönt egy dologról**, a felület ebből következik.
   Ilyen állapotok: `szerkesztettId`, `urlapNyitva`, `torlendoId`,
-  `emlekeztetoElhalasztva`, `valasztottSzezon`. Ne állítgass felületi elemeket szétszórva.
+  `emlekeztetoElhalasztva`, `valasztottSzezon`, `szuletesiEv`, `korKerdesNyitva`. Ne állítgass felületi elemeket szétszórva.
 - **Szűrő soha nem hat az adatmozgatásra.** A szezon (és bármilyen jövőbeli
   szűrő) csak azt szűri, ami látszik: lista, összesítő, diagramok. A fájlba
   mentés, a CSV export, a visszatöltés és a mentési emlékeztető mindig az

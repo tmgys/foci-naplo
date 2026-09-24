@@ -60,6 +60,10 @@ button { font:inherit; cursor:pointer; border-radius:6px; }
 .szezonSor label { display:inline; margin:0; }
 .szezonSor select { width:auto; height:28px; padding:0 6px; font-size:13px; font-weight:600;
                     font-variant-numeric:tabular-nums; }
+.korosztalySor { display:flex; align-items:center; gap:6px; font-size:13px; }
+.korosztalySor .elvalaszto { color:var(--ink3); }
+.korosztalySor .kor { font-weight:600; font-variant-numeric:tabular-nums; }
+.korosztalySor .szoveggomb { font-size:12px; padding:3px 2px; }
 :focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
 
 /* ---- Szezonösszesítő ----------------------------------------------- */
@@ -111,6 +115,9 @@ figcaption { font-family:var(--display); font-weight:600; font-size:14px; }
 .modal .melyik { font-family:var(--mono); font-size:14px; }
 .modal .figyelmeztet { color:var(--ink3); font-size:13px; margin-bottom:20px; }
 .modalGombok { display:flex; justify-content:flex-end; gap:10px; }
+.modal input.evMezo { width:7em; margin:6px 0 4px; font-family:var(--mono);
+                      font-variant-numeric:tabular-nums; }
+.modal .hibaUzenet { color:var(--veszt); font-size:13px; }
 .veszelyes { font-family:var(--body); font-size:14px; font-weight:500; padding:8px 18px;
              border:1px solid var(--veszt); background:var(--veszt); color:#fff; border-radius:6px; }
 .veszelyes:hover { filter:brightness(1.08); }
@@ -196,6 +203,7 @@ figcaption { font-family:var(--display); font-weight:600; font-size:14px; }
       <div class="szezonSor">
         <label class="eyebrow" for="szezonValaszto">Szezon</label>
         <select id="szezonValaszto" onchange="szezonValt(this.value)"></select>
+        <span class="korosztalySor" id="korosztalySor"></span>
       </div>
       <h1>Focimeccs-napló</h1>
     </div>
@@ -292,6 +300,22 @@ figcaption { font-family:var(--display); font-weight:600; font-size:14px; }
         <button type="button" class="veszelyes" onclick="torlesMegerosit()">Törlés</button>
       </div>
     </div>
+  </div>
+
+  <div class="modalHatter" id="korModal" hidden>
+    <form class="modal" role="dialog" aria-modal="true" aria-labelledby="korCim" id="korUrlap" novalidate>
+      <h2 id="korCim">Korosztály</h2>
+      <label for="korEv">Melyik évben született a gyerek?</label>
+      <input class="evMezo" id="korEv" type="text" inputmode="numeric" pattern="[0-9]*"
+             maxlength="4" autocomplete="off" placeholder="pl. 2017">
+      <p class="figyelmeztet">Ebből számolja az app a korosztályt minden szezonra.
+         Csak ezen az eszközön tárolódik.</p>
+      <p class="hibaUzenet" id="korHiba" role="alert" hidden></p>
+      <div class="modalGombok">
+        <button type="button" class="halvanygomb" id="korHalasztGomb" onclick="korKerdesBezar()">Később</button>
+        <button type="submit" class="fogomb">Mentés</button>
+      </div>
+    </form>
   </div>
 
 </div>
@@ -413,6 +437,7 @@ function ertekelesJelolo(ertek) {
 function kirajzol() {
   // Minden, ami itt látszik, a választott szezon meccseiből dolgozik (lásd 8. szakasz).
   szezonValasztoFrissit();
+  korosztalyFrissit();
   const lathato = szezonMeccsei();
   const rendezett = [...lathato].sort((a, b) => b.datum.localeCompare(a.datum));
   const ures = document.getElementById("ures");
@@ -762,12 +787,110 @@ function szezonValt(ertek) {
   kirajzol();
 }
 
-// ---- 9. Indulás -----------------------------------------------------
+// ---- 9. Korosztály --------------------------------------------------
+// A korosztály nincs eltárolva: a kiválasztott szezonból és a születési évből
+// számoljuk. korosztály = a szezon záró éve − születési év
+// (pl. 2017-es gyerek, 2025/26 → 2026 − 2017 = U9). A szezonnal együtt,
+// július 1-jén vált. U21 fölött "Felnőtt"; U6 alatt is szám (U5, U4…);
+// ha a szezon a születés előtti, nem mutatunk semmit.
+//
+// A születési év SZEMÉLYES ADAT: csak a böngészőben él, külön kulcs alatt.
+// Nem kerül a kódba, a mentésfájlba és a CSV-be, a visszatöltés nem nyúl hozzá.
+const BEALLITAS_KULCS = "foci-naplo-beallitas";
+const LEGKORABBI_EV = 1990;
+let szuletesiEv = null;       // null = még nincs megadva
+let korKerdesNyitva = false;  // látszik-e a kérdésablak
+
+function beallitasBetolt() {
+  try {
+    const b = JSON.parse(localStorage.getItem(BEALLITAS_KULCS)) || {};
+    if (evRendben(b.szuletesiEv)) szuletesiEv = b.szuletesiEv;
+  } catch (e) {}
+}
+function beallitasMent() {
+  try { localStorage.setItem(BEALLITAS_KULCS, JSON.stringify({ szuletesiEv })); } catch (e) {}
+}
+
+function evRendben(ev) {
+  return Number.isInteger(ev) && ev >= LEGKORABBI_EV && ev <= new Date().getFullYear();
+}
+
+function korosztaly(szezon, ev) {
+  if (!ev) return null;
+  const kor = (szezon + 1) - ev;
+  if (kor <= 0) return null;            // a szezon a születés előtti
+  return kor > 21 ? "Felnőtt" : "U" + kor;
+}
+
+// A fejléc sora a szuletesiEv-ből és a valasztottSzezon-ból következik.
+function korosztalyFrissit() {
+  const sor = document.getElementById("korosztalySor");
+  if (!szuletesiEv) {
+    sor.innerHTML = "<button type='button' class='szoveggomb' onclick='korKerdesNyit()'>korosztály megadása</button>";
+    return;
+  }
+  const k = korosztaly(valasztottSzezon, szuletesiEv);
+  sor.innerHTML = (k ? "<span class='elvalaszto'>·</span><span class='kor'>" + k + "</span>" : "")
+    + "<button type='button' class='szoveggomb' onclick='korKerdesNyit()'>módosít</button>";
+}
+
+// Egy hely dönti el, látszik-e az ablak.
+function korAblakFrissit() {
+  document.getElementById("korModal").hidden = !korKerdesNyitva;
+}
+
+function korKerdesNyit() {
+  korKerdesNyitva = true;
+  const mezo = document.getElementById("korEv");
+  mezo.value = szuletesiEv ? String(szuletesiEv) : "";
+  // Első megadásnál "Később", módosításnál "Mégse" — azt mondja, ami történik.
+  document.getElementById("korHalasztGomb").textContent = szuletesiEv ? "Mégse" : "Később";
+  document.getElementById("korHiba").hidden = true;
+  korAblakFrissit();
+  mezo.focus();
+}
+
+// Később / Mégse: nem változik semmi. Ha még nincs megadva, a következő
+// megnyitáskor újra rákérdezünk.
+function korKerdesBezar() {
+  korKerdesNyitva = false;
+  korAblakFrissit();
+}
+
+document.getElementById("korUrlap").addEventListener("submit", e => {
+  e.preventDefault();
+  const szoveg = document.getElementById("korEv").value.trim();
+  const ev = /^[0-9]{4}$/.test(szoveg) ? Number(szoveg) : NaN;
+  if (!evRendben(ev)) {
+    const hiba = document.getElementById("korHiba");
+    hiba.textContent = "Az évszám " + LEGKORABBI_EV + " és " + new Date().getFullYear() + " között lehet. "
+      + (szuletesiEv ? "A korábbi érték (" + szuletesiEv + ") nem változott." : "Nem mentettem semmit.");
+    hiba.hidden = false;
+    document.getElementById("korEv").focus();
+    return;
+  }
+  szuletesiEv = ev;
+  beallitasMent();
+  korKerdesBezar();
+  kirajzol();
+});
+
+// Esc és a sötét háttérre kattintás is Később / Mégse
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape" && korKerdesNyitva) korKerdesBezar();
+});
+document.getElementById("korModal").addEventListener("click", e => {
+  if (e.target.id === "korModal") korKerdesBezar();
+});
+
+// ---- 10. Indulás ----------------------------------------------------
 betolt();
 metaBetolt();
+beallitasBetolt();
 urlapModValtas();
 kirajzol();
 emlekeztetoFrissit();
+if (!szuletesiEv) korKerdesNyit();   // első megnyitáskor (vagy amíg nincs megadva) rákérdezünk
 </script>
 </body>
 </html>
